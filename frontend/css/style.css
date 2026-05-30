@@ -366,51 +366,49 @@ main {
 }
 .dino-card:hover .dino-emoji { transform: scale(1.15) rotate(-5deg); }
 
-/* Image replacement for emoji: background image with fade-to-transparent mask */
+/* Image replacement for emoji: thumbnail container (show full image) */
 .dino-image {
-  /* increased size for better visibility */
+  /* keep same sizing as before for layout */
   width: 120px;
   height: 120px;
-  display: block;
+  display: flex; /* center the <img> */
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   border-radius: 8px;
   background-color: rgba(255,255,255,0.06);
-  background-size: cover;
-  background-position: center center;
-  filter: drop-shadow(2px 6px 14px rgba(0,0,0,0.45));
-  transition: transform 0.35s, opacity 0.35s, box-shadow 0.35s;
   position: relative;
   overflow: hidden;
+  filter: drop-shadow(2px 6px 14px rgba(0,0,0,0.45));
 }
 
-/* Apply a smooth fade-to-transparent on the right edge (mask). Uses -webkit- for Safari support */
-.dino-image {
-  /* widen mask to suit larger images */
-  -webkit-mask-image: linear-gradient(90deg, black 60%, transparent 100%);
-  mask-image: linear-gradient(90deg, black 60%, transparent 100%);
+/* actual img element inside the container — show entire image, centered */
+.dino-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* uniform size, crops if necessary but looks consistent */
+  object-position: center center;
+  display: block;
+  background-color: rgba(0,0,0,0.03);
+  opacity: 0;
+  transition: opacity 260ms ease-in-out, transform 260ms ease;
 }
 
+.dino-image img.loaded {
+  opacity: 1;
+}
+
+/* restore hover scaling (reverting the softened hover) */
 .dino-card:hover .dino-image { transform: translateY(-4px) scale(1.03); }
 
-/* Modal emoji replacement (larger image) */
-.modal-emoji {
-  /* bigger modal preview */
-  width: 160px;
-  height: 160px;
-  border-radius: 10px;
-  background-size: cover;
-  background-position: center center;
-  display: inline-block;
-  vertical-align: middle;
-  margin-right: 12px;
-  filter: drop-shadow(0 8px 30px rgba(0,0,0,0.5));
-  -webkit-mask-image: linear-gradient(90deg, black 72%, transparent 100%);
-  mask-image: linear-gradient(90deg, black 72%, transparent 100%);
-}
-
-/* Small helper: when there's no image available keep original emoji visible */
-.dino-image.fallback, .modal-emoji.fallback {
-  background: transparent;
+/* ensure emoji fallback uses the same size/placement */
+.dino-emoji {
+  width: 120px;
+  height: 120px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 52px;
 }
 
 .card-title-group { flex: 1; }
@@ -584,9 +582,7 @@ main {
   pointer-events: none;
   border-top-left-radius: 4px;
   border-top-right-radius: 4px;
-  /* fade to transparent toward bottom */
-  -webkit-mask-image: linear-gradient(to bottom, black 68%, transparent 100%);
-  mask-image: linear-gradient(to bottom, black 68%, transparent 100%);
+  /* removed mask-image to avoid parser issues; using ::after overlay for fade instead */
 }
 
 /* ensure the rest of modal content sits above the hero */
@@ -600,8 +596,18 @@ main {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.05) 50%, transparent 100%);
+  /* very small, stronger fade at the very bottom: most of the image remains fully visible,
+     then quickly transition (from ~88% to 100%) into the parchment background color.
+     This keeps the fade tight and noticeable without covering much of the image. */
   pointer-events: none;
+  background: linear-gradient(to bottom,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0) 88%,
+    var(--parchment-cream) 98%,
+    var(--parchment-cream) 100%
+  );
+  mix-blend-mode: normal;
+  opacity: 0.96; /* slightly strong but narrow */
 }
 
 .modal-header {
@@ -783,8 +789,8 @@ main {
 }
 
 /* small pop on open to draw attention */
-.modal-overlay.open .modal .dino-period,
-.modal-overlay.open .modal .dino-diet-badge {
+/* (styles already applied earlier; removed duplicate selector) */
+
 /* ===== LOADING ===== */
 #loadingMsg {
   text-align: center;
@@ -834,6 +840,6 @@ footer {
   .controls { flex-direction: column; align-items: stretch; }
   .filter-btn { text-align: center; }
   /* scale images down on small screens */
-  .dino-image { width: 64px; height: 64px; -webkit-mask-image: linear-gradient(90deg, black 70%, transparent 100%); mask-image: linear-gradient(90deg, black 70%, transparent 100%); }
-  .modal-emoji { width: 96px; height: 96px; -webkit-mask-image: linear-gradient(90deg, black 78%, transparent 100%); mask-image: linear-gradient(90deg, black 78%, transparent 100%); }
+  .dino-image { width: 64px; height: 64px; -webkit-mask-image: none; mask-image: none; }
+  .modal-emoji { width: 96px; height: 96px; -webkit-mask-image: none; mask-image: none; }
 }

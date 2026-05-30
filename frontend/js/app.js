@@ -144,10 +144,16 @@ function createCard(dino, index) {
     : dino.description;
 
   // Build header image (use image if available, otherwise fallback to images/{id}.jpg, then emoji)
-  let visualHTML = '';
-  // prefer explicit image tag, otherwise try images/{id}.jpg; attach data-emoji for fallback
-  const inferredImage = dino.image ? dino.image.replace(/'/g, "%27") : `images/${dino.id}.jpg`;
-  visualHTML = `<span class="dino-image" style="background-image: url('${inferredImage}')" aria-hidden="true" data-emoji="${dino.emoji || '🦕'}"></span>`;
+  // Prefer root-relative paths so images resolve correctly whether the page is served from / or /frontend/
+  const rawImage = dino.image ? dino.image.replace(/'/g, "%27") : `images/${dino.id}.jpg`;
+  const inferredImagePath = rawImage.startsWith('/') || rawImage.match(/^[a-zA-Z]+:\/\//)
+    ? (rawImage.startsWith('/') ? rawImage : ('/' + rawImage.split('://').pop()))
+    : ('/' + rawImage);
+
+  // thumbnail markup (no per-image data-pos — reverted to previous behavior)
+  const visualHTML = `<span class="dino-image" aria-hidden="true" data-emoji="${dino.emoji || '🦕'}">
+      <img class="dino-img-element" src="${inferredImagePath}" alt="${dino.name}" />
+    </span>`;
 
   card.innerHTML = `
     <div class="card-inner">
@@ -183,6 +189,24 @@ function createCard(dino, index) {
     </div>
   `;
 
+  // attach image handlers for load/error and small cached-image fallback
+  const imgEl = card.querySelector('.dino-img-element');
+  if (imgEl) {
+    imgEl.addEventListener('load', () => imgEl.classList.add('loaded'));
+    imgEl.addEventListener('error', () => {
+      const emoji = document.createElement('span');
+      emoji.className = 'dino-emoji';
+      const fallbackEmoji = card.querySelector('.dino-image')?.dataset?.emoji || '🦕';
+      emoji.textContent = fallbackEmoji;
+      const container = card.querySelector('.dino-image');
+      if (container) container.replaceWith(emoji);
+    });
+    // fallback for cached images
+    setTimeout(() => {
+      if (imgEl.complete && imgEl.naturalWidth) imgEl.classList.add('loaded');
+    }, 80);
+  }
+
   card.addEventListener('click', () => openModal(dino));
   return card;
 }
@@ -196,27 +220,18 @@ function openModal(dino) {
 
   // modal visual (image or emoji)
   let modalVisual = '';
-  // prefer explicit image tag, otherwise try images/{id}.jpg; attach data-emoji for fallback
-  const inferredModal = dino.image ? dino.image.replace(/'/g, "%27") : `images/${dino.id}.jpg`;
+  const rawModal = dino.image ? dino.image.replace(/'/g, "%27") : `images/${dino.id}.jpg`;
+  const inferredModalPath = rawModal.startsWith('/') || rawModal.match(/^[a-zA-Z]+:\/\//)
+    ? (rawModal.startsWith('/') ? rawModal : ('/' + rawModal.split('://').pop()))
+    : ('/' + rawModal);
 
-  // Adjust vertical positioning for specific dinos so the head is visible in the hero area
-  // default: center 50%
+  // default hero pos adjustments
   let heroPosY = '50%';
-  if (dino.id === 'trex') {
-    // T. Rex photos often have the head near the top — align image toward the top so the head appears inside the hero
-    // use a slightly lower offset so the head is more centered in the hero
-    heroPosY = '25%';
-  } else if (dino.id === 'brachiosaurus') {
-    // Brachiosaurus has a very tall neck — nudge image a bit to show the head
-    // show more of the upper body/neck
-    heroPosY = '10%';
-  }
+  if (dino.id === 'trex') heroPosY = '25%';
+  else if (dino.id === 'brachiosaurus') heroPosY = '10%';
 
-  // apply the computed background-position inline so each modal can vary independently
-  modalVisual = `<span class="modal-emoji" style="background-image: url('${inferredModal}'); background-position: center ${heroPosY};" aria-hidden="true" data-emoji="${dino.emoji || '🦕'}" data-id="${dino.id}"></span>`;
-
-  // hero image (full-width background at top of modal)
-  const modalHeroHTML = `<div class="modal-hero" style="background-image: url('${inferredModal}'); background-position: center ${heroPosY};" data-emoji="${dino.emoji || '🦕'}" data-id="${dino.id}"></div>`;
+  modalVisual = `<span class="modal-emoji" style="background-image: url('${inferredModalPath}'); background-position: center ${heroPosY};" aria-hidden="true" data-emoji="${dino.emoji || '🦕'}" data-id="${dino.id}"></span>`;
+  const modalHeroHTML = `<div class="modal-hero" style="background-image: url('${inferredModalPath}'); background-position: center ${heroPosY};" data-emoji="${dino.emoji || '🦕'}" data-id="${dino.id}"></div>`;
 
   content.innerHTML = `
     ${modalHeroHTML}
@@ -270,20 +285,16 @@ function openModal(dino) {
 
   document.getElementById('modalClose').addEventListener('click', closeModal);
 
-  // After layout, compute hero height up to the divider and verify images
-  // Use setTimeout to wait for layout/paint
   setTimeout(() => {
     const hero = content.querySelector('.modal-hero');
     const divider = content.querySelector('.modal-divider');
     if (hero && divider) {
       const contentRect = content.getBoundingClientRect();
       const dividerRect = divider.getBoundingClientRect();
-      // height from top of content to top of divider (leave small overlap)
       const heroHeight = Math.max(100, dividerRect.top - contentRect.top + 8);
       hero.style.setProperty('--modal-hero-height', `${heroHeight}px`);
       hero.style.height = `${heroHeight}px`;
     }
-    // verify both hero and modal-emoji images
     verifyModalImage();
   }, 40);
 }
