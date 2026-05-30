@@ -13,50 +13,83 @@ document.addEventListener('DOMContentLoaded', () => {
   setupEventListeners();
 });
 
-// ===== LOAD & PARSE XML (REPLACED WITH REST API JSON LOAD) =====
+// ===== LOAD DATA: try REST API, then fallback to local XML =====
 async function loadDinosaurData() {
   try {
-    // Fetch data from backend REST API (expect JSON array of dinosaurs)
+    // Try API first
     const response = await fetch('/api/dinosaurs');
-    if (!response.ok) throw new Error('Nu s-a putut încărca datele de la server');
+    if (response.ok) {
+      const data = await response.json();
+      allDinosaurs = data.map(mapServerDinoToClient);
+    } else {
+      // API returned non-OK (e.g., 404/500) -> fallback to local XML
+      await loadFromLocalXML();
+    }
 
-    const data = await response.json();
-
-    // Map/normalize fields if necessary (server returns same field names)
-    allDinosaurs = data.map(d => ({
-      id: d.id || '',
-      name: d.name || '',
-      period: d.period || '',
-      years: d.years || '',
-      diet: d.diet || '',
-      length: d.length || '',
-      weight: d.weight || '',
-      region: d.region || '',
-      description: d.description || '',
-      funFact: d.funFact || '',
-      emoji: d.emoji || '',
-      color: d.color || '',
-      image: d.image || ''
-    }));
-
-    // Actualizăm statisticile din header
     document.getElementById('dinoCount').textContent = allDinosaurs.length;
     document.getElementById('eraCount').textContent  = new Set(allDinosaurs.map(d => d.period)).size;
-
-    // Ascundem loading, afișăm grid
     document.getElementById('loadingMsg').style.display = 'none';
     renderGrid(allDinosaurs);
-
   } catch (err) {
-    console.error('Eroare la încărcarea datelor:', err);
-    document.getElementById('loadingMsg').textContent =
-      '⚠ Eroare la încărcarea enciclopediei. Verificați că backend-ul este pornit și disponibil la /api/dinosaurs.';
+    console.warn('REST API failed, attempting XML fallback:', err);
+    await loadFromLocalXML();
+    document.getElementById('dinoCount').textContent = allDinosaurs.length;
+    document.getElementById('eraCount').textContent  = new Set(allDinosaurs.map(d => d.period)).size;
+    document.getElementById('loadingMsg').style.display = 'none';
+    renderGrid(allDinosaurs);
   }
 }
 
-// Helper: kept for backward compatibility but no longer used for XML
-function getText(node, tag) {
-  return '';
+function mapServerDinoToClient(d) {
+  return {
+    id: d.id || '',
+    name: d.name || '',
+    period: d.period || '',
+    years: d.years || '',
+    diet: d.diet || '',
+    length: d.length || '',
+    weight: d.weight || '',
+    region: d.region || '',
+    description: d.description || '',
+    funFact: d.funFact || d.fun_fact || '',
+    emoji: d.emoji || '',
+    color: d.color || '',
+    image: d.image || ''
+  };
+}
+
+async function loadFromLocalXML() {
+  try {
+    const resp = await fetch('/xml/dinosaurs.xml');
+    if (!resp.ok) throw new Error('Nu s-a putut încărca XML-ul local');
+    const xmlText = await resp.text();
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, 'application/xml');
+    const parseError = xmlDoc.querySelector('parsererror');
+    if (parseError) throw new Error('Eroare la parsarea XML local');
+
+    const dinoNodes = xmlDoc.querySelectorAll('dinosaur');
+    allDinosaurs = Array.from(dinoNodes).map(node => ({
+      id: node.getAttribute('id') || '',
+      name: node.querySelector('name') ? node.querySelector('name').textContent.trim() : '',
+      period: node.querySelector('period') ? node.querySelector('period').textContent.trim() : '',
+      years: node.querySelector('years') ? node.querySelector('years').textContent.trim() : '',
+      diet: node.querySelector('diet') ? node.querySelector('diet').textContent.trim() : '',
+      length: node.querySelector('length') ? node.querySelector('length').textContent.trim() : '',
+      weight: node.querySelector('weight') ? node.querySelector('weight').textContent.trim() : '',
+      region: node.querySelector('region') ? node.querySelector('region').textContent.trim() : '',
+      description: node.querySelector('description') ? node.querySelector('description').textContent.trim() : '',
+      funFact: node.querySelector('fun_fact') ? node.querySelector('fun_fact').textContent.trim() : (node.querySelector('fun_fact') ? node.querySelector('fun_fact').textContent.trim() : ''),
+      emoji: node.querySelector('emoji') ? node.querySelector('emoji').textContent.trim() : '',
+      color: node.querySelector('color') ? node.querySelector('color').textContent.trim() : '',
+      image: node.querySelector('image') ? node.querySelector('image').textContent.trim() : ''
+    }));
+
+  } catch (err) {
+    console.error('Eroare la încărcarea XML local:', err);
+    document.getElementById('loadingMsg').textContent = '⚠ Eroare la încărcarea datelor (niște date locale lipsesc).';
+    allDinosaurs = [];
+  }
 }
 
 // ===== RENDER GRID =====
