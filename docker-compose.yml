@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: dino-postgres
+    environment:
+      POSTGRES_DB: dinowiki
+      POSTGRES_USER: dinouser
+      POSTGRES_PASSWORD: dinopass
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: dino-backend
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/dinowiki
+      SPRING_DATASOURCE_USERNAME: dinouser
+      SPRING_DATASOURCE_PASSWORD: dinopass
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./images:/app/images
+volumes:
+  pgdata:
+
