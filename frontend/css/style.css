@@ -31,6 +31,13 @@
   --font-title:       'Cinzel Decorative', serif;
   --font-body:        'Crimson Pro', serif;
   --font-lore:        'IM Fell English', serif;
+
+  /* New: darker body text for readability */
+  --body-text-dark:   #3b2600; /* deep brown */
+
+  /* Provide defaults for previously unresolved custom properties */
+  --cursor-size: 48px;
+  --modal-hero-height: 260px;
 }
 
 /* ===== RESET & BASE ===== */
@@ -40,7 +47,7 @@ html { scroll-behavior: smooth; }
 
 body {
   background-color: var(--jungle-darkest);
-  color: var(--bone-white);
+  color: var(--body-text-dark); /* changed from parchment/bone to dark brown */
   font-family: var(--font-body);
   font-size: 18px;
   line-height: 1.7;
@@ -48,8 +55,45 @@ body {
   overflow-x: hidden;
   /* keep the original data-URI cursor as a commented fallback (preserved per your request) */
   /* cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20'%3E%3Ccircle cx='10' cy='10' r='4' fill='%23c8960c' opacity='0.8'/%3E%3C/svg%3E") 10 10, auto; */
-  /* use the custom cursor image placed in the project's images/ folder (path is relative to this CSS file when served) */
-  cursor: url("/images/memes-fire-breathing-parasaurolophus-pack.png") 16 16, auto;
+  /* original image-based cursor removed — using a custom DOM cursor for sprite hover support. */
+}
+
+/* Custom cursor using the two-sided sprite image.
+   The PNG should contain the normal state on the left half and the hover state on the right half.
+   Customize --cursor-size if your sprite's side size differs.
+*/
+.custom-cursor {
+  position: fixed;
+  pointer-events: none;
+  z-index: 99999;
+  width: var(--cursor-size, 48px);
+  height: var(--cursor-size, 48px);
+  transform: translate(-50%, -50%);
+  transition: transform 100ms linear, opacity 120ms linear, filter 80ms linear;
+  background-image: url('/images/memes-fire-breathing-parasaurolophus-pack.png');
+  background-repeat: no-repeat;
+  /* Show left half by default */
+  background-position: left center;
+  /* Make background-size double width so each half fits the cursor box */
+  background-size: 200% auto;
+  opacity: 0.95;
+  mix-blend-mode: normal;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.4));
+  border-radius: 6px;
+}
+
+/* Hover / interactive state uses right half of the sprite */
+.custom-cursor.cursor-hover {
+  background-position: right center;
+  transform: translate(-50%, -50%) scale(1.06);
+  opacity: 1;
+}
+
+/* Hide the custom cursor on small screens or when user disables it */
+@media (max-width: 800px) {
+  .custom-cursor { display: none; }
+  /* keep system cursor for touch devices */
+  html, body { cursor: auto; }
 }
 
 /* ===== JUNGLE BACKGROUND ===== */
@@ -260,6 +304,7 @@ header {
   letter-spacing: 0.05em;
 }
 
+/* Existing hover/active for generic filter buttons */
 .filter-btn:hover,
 .filter-btn.active {
   background: rgba(200,150,12,0.2);
@@ -267,6 +312,168 @@ header {
   color: var(--parchment-warm);
   box-shadow: 0 0 15px rgba(200,150,12,0.15);
 }
+
+/* Cancel button: keep base style but show lighter green on hover */
+.btn-cancel {
+  background: rgba(42,77,47,0.85);
+  border-color: rgba(78,124,69,0.4);
+  color: var(--parchment-cream);
+}
+.btn-cancel:hover {
+  background: rgba(78,124,69,0.95); /* lighter green on hover */
+  border-color: rgba(78,124,69,0.9);
+  color: white;
+  box-shadow: 0 6px 20px rgba(78,124,69,0.18);
+    transform: translateY(-3px);
+}
+
+/* Create button: default dark red, hover lighter red to stand out */
+.btn-create {
+  /* darker baseline to increase contrast with hover */
+  background: #2a0706; /* very dark red */
+  border-color: #2a0706;
+  color: #ffdcd9; /* pale text to contrast */
+}
+
+.filter-btn.btn-create:hover, .btn-create:hover {
+  /* high-contrast hover: bright saturated red, lift and stronger shadow */
+  background: #770e05; /* force override */
+  border-color: #770e05 !important;
+  color: #fff !important;
+  transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(78,124,69,0.18);
+}
+
+/* Ensure modal-specific variant also uses same rules (higher specificity) */
+.modal .filter-btn.btn-create, .modal .btn-create {
+
+  color: #fff;
+}
+.modal .filter-btn.btn-create:hover, .modal .btn-create:hover {
+
+  color: #fff !important;
+}
+
+/* Delete button in modal: make it clearly visible in red but smaller */
+.btn-delete {
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  line-height: 1;
+  background: rgba(139,26,10,0.95);
+  border-color: rgba(120,20,8,0.9);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 6px;
+  position: relative;
+  z-index: 3;
+  box-shadow: 0 6px 14px rgba(139,26,10,0.18);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.12s ease;
+}
+.btn-delete:hover {
+  background: #ff3b2f;
+  border-color: #ff2a1f;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(255,59,47,0.18);
+}
+
+/* Position action buttons near the top-right but offset left of the close button
+   so Delete/Edit won't overlap the close icon. Use absolute positioning for precision. */
+.modal-actions {
+  position: absolute;
+  top: 12px;         /* align with close button */
+  right: 140px;      /* increase offset to move actions further left from the close button */
+  z-index: 6;        /* above hero and modal content */
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+
+/* Reduce top padding so hero image sits flush at the top of modal — no large empty gap */
+.modal-content {
+  position: relative;
+  padding: 0 28px 20px; /* hero flush to top */
+}
+
+/* Hero image that fills the top of modal up to the divider */
+.modal-hero {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--modal-hero-height, 260px);
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  z-index: 0; /* behind the textual content */
+  pointer-events: none;
+  border-top-left-radius: 4px;
+  border-top-right-radius: 4px;
+}
+
+/* ensure the rest of modal content sits above the hero */
+.modal-content > :not(.modal-hero) {
+  position: relative;
+  z-index: 1;
+}
+
+/* make sure the close button remains in top-right and actions are to its left */
+.modal-close {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  background: rgba(42,77,47,0.2);
+  border: 1px solid rgba(42,77,47,0.4);
+  border-radius: 50%;
+  color: var(--jungle-darkest);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  font-weight: bold;
+  z-index: 7; /* above the actions */
+}
+.modal-close:hover {
+  background: rgba(139,37,0,0.2);
+  border-color: var(--blood-red);
+  color: var(--blood-red);
+}
+
+/* Mobile fallback: stack actions below header/content and disable absolute positioning */
+@media (max-width: 600px) {
+  .modal-content { padding: 12px 22px 22px; }
+  .modal-actions {
+    position: relative;
+    top: auto;
+    right: auto;
+    margin-top: calc(var(--modal-hero-height, 260px) + 8px);
+    justify-content: flex-end;
+  }
+  .modal-close { top: 12px; right: 12px; }
+}
+
+/* Final overrides to ensure modal hero is flush and actions don't overlap close button */
+/* Ensure content starts below the hero: add top padding equal to hero height + gap */
+/* Final overrides — aplicat DOAR în modal, nu pe alte pagini */
+.modal-overlay .modal-content { padding: calc(var(--modal-hero-height, 260px) + 16px) 28px 20px !important; }
+.modal-overlay .modal-actions { position: absolute !important; top: 12px !important; right: 140px !important; z-index: 6 !important; }
+.modal-overlay .modal-close { top: 8px !important; right: 12px !important; z-index: 7 !important; }
+
+@media (max-width: 600px) {
+    .modal-overlay .modal-content { padding: calc(var(--modal-hero-height, 220px) + 12px) 22px 18px !important; }
+    .modal-overlay .modal-actions { position: relative !important; top: auto !important; right: auto !important; margin-top: 8px !important; }
+}
+
+/* Small tweak: if the hero is taller, keep actions vertically centered with a small top offset */
+@media (min-width: 720px) {
+  .modal-actions { top: 12px; }
+}
+
+/* End overrides */
 
 /* ===== MAIN GRID ===== */
 main {

@@ -3,6 +3,7 @@ package com.example.dinowiki.model;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Column;
+import jakarta.persistence.Lob;
 
 @Entity
 public class Dinosaur {
@@ -26,6 +27,8 @@ public class Dinosaur {
 
     private String emoji;
     private String color;
+    @Lob
+    @Column(columnDefinition = "text")
     private String image;
 
     // getters and setters
@@ -69,4 +72,3 @@ public class Dinosaur {
     public String getImage() { return image; }
     public void setImage(String image) { this.image = image; }
 }
-

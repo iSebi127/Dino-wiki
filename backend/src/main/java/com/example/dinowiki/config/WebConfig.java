@@ -15,16 +15,14 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // serve images mounted into the container from project root ./images
+        // serve images mounted into the container from project root ./images (development override)
         registry.addResourceHandler("/images/**")
                 .addResourceLocations("file:./images/");
 
-        // serve frontend static files from ./frontend/
-        registry.addResourceHandler("/css/**", "/js/**", "/index.html", "/favicon.ico")
-                .addResourceLocations("file:./frontend/css/", "file:./frontend/js/", "file:./frontend/index.html", "file:./frontend/favicon.ico");
-
-        // fallback: serve any other files from frontend folder
-        registry.addResourceHandler("/**")
-                .addResourceLocations("file:./frontend/");
+        // NOTE: removed the catch-all file-based /** resource handler so that Spring Boot's
+        // default static resource handling (classpath:/static/) serves embedded frontend files
+        // when the app is packaged in the JAR. Having the file-based /** mapping could
+        // intercept requests and return 404 inside containers where frontend/dist isn't available
+        // on the filesystem.
     }
 }
